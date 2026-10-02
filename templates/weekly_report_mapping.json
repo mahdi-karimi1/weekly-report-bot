@@ -1,0 +1,33 @@
+{
+  "sheet_name": "Sheet1",
+  "person_name_cell": "B6",
+  "report_date_cell": "F7",
+  "department_project_cell": "B7",
+  "person_name_prefix": "نام شخص: ",
+  "report_date_prefix": "تاریخ گزارش: ",
+  "department_project_prefix": "نام دپارتمان / پروژه: ",
+  "data_start_row": 11,
+  "data_end_row": 25,
+  "columns": {
+    "planned_completed": {"text": "B", "hours": "C"},
+    "unplanned_completed": {"text": "D", "hours": "E"},
+    "self_initiated": {"text": "F", "hours": "G"},
+    "next_week_planned": {"text": "H", "hours": "I"},
+    "problems_and_suggestions": {"text": "J"}
+  },
+  "clear_cells": [
+    "B6", "F6", "F7", "B7"
+  ],
+  "clear_column_ranges": [
+    {"column": "B", "start_row": 11, "end_row": 25},
+    {"column": "C", "start_row": 11, "end_row": 25},
+    {"column": "D", "start_row": 11, "end_row": 25},
+    {"column": "E", "start_row": 11, "end_row": 25},
+    {"column": "F", "start_row": 11, "end_row": 25},
+    {"column": "G", "start_row": 11, "end_row": 25},
+    {"column": "H", "start_row": 11, "end_row": 25},
+    {"column": "I", "start_row": 11, "end_row": 25},
+    {"column": "J", "start_row": 11, "end_row": 25}
+  ],
+  "_comment": "Authoritative mapping for FRN weekly work-report template. Do not invent placeholder values for blank cells."
+}

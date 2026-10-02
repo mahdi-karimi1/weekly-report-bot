@@ -1,0 +1,27 @@
+[Unit]
+Description=Telegram AI Weekly Report Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/opt/weekly-report-bot
+EnvironmentFile=/opt/weekly-report-bot/.env
+ExecStart=/opt/weekly-report-bot/.venv/bin/python /opt/weekly-report-bot/run.py
+Restart=on-failure
+RestartSec=5
+# Graceful stop: python-telegram-bot handles SIGTERM via run_polling
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Hardening (adjust paths if needed)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/weekly-report-bot/outputs /opt/weekly-report-bot/temp_audio /opt/weekly-report-bot
+
+[Install]
+WantedBy=multi-user.target
