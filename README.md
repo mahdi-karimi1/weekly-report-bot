@@ -116,8 +116,8 @@ Set at least:
 New users run `/start` and submit their name and department. Until an administrator
 approves them, report requests and other bot actions are blocked. They can share
 the chat ID shown by the bot with an administrator. Administrators manage access
-with `/verify <chat_id>` and `/unverify <chat_id>`; `/users` lists the latest 20
-registered users. These commands are only available in chats listed in
+with `/verify <chat_id>` and `/unverify <chat_id>`; `/users` lists all
+registered users, splitting long lists across multiple messages. These commands are only available in chats listed in
 `ADMIN_CHAT_IDS`. Existing users must also be approved by an administrator.
 
 ### 5. Start the bot (long polling)

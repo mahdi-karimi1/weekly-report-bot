@@ -203,12 +203,10 @@ class Database:
             session.expunge(user)
             return user
 
-    def list_users(self, limit: int = 20) -> list[User]:
+    def list_users(self) -> list[User]:
         with self.session() as session:
             users = list(
-                session.scalars(
-                    select(User).order_by(User.id.desc()).limit(limit)
-                )
+                session.scalars(select(User).order_by(User.id.desc()))
             )
             for user in users:
                 session.expunge(user)

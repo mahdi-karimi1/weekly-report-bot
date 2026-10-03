@@ -11,7 +11,8 @@ import pytest
 from telegram.ext import ApplicationHandlerStop
 
 from bot.config import Settings
-from bot.handlers.user_management import access_control, verify_command
+from bot.handlers.dashboard import MAIN_KEYBOARD
+from bot.handlers.user_management import access_control, users_command, verify_command
 from bot.models.database import Database
 
 
@@ -52,6 +53,12 @@ async def test_unverified_user_can_start_registration(
     db: Database,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    db.get_or_create_user(42, "user42", None)
+    db.complete_onboarding(
+        42,
+        full_name="کاربر آزمایشی",
+        department="فناوری",
+    )
     monkeypatch.setattr("bot.handlers.user_management.get_database", lambda: db)
     update = SimpleNamespace(
         effective_user=SimpleNamespace(id=42),
@@ -75,6 +82,7 @@ async def test_admin_can_verify_by_chat_id(
     )
     context = SimpleNamespace(
         args=["42"],
+        bot=SimpleNamespace(send_message=AsyncMock()),
         application=SimpleNamespace(
             bot_data={"settings": Settings(ADMIN_CHAT_IDS="100")}
         ),
@@ -85,6 +93,39 @@ async def test_admin_can_verify_by_chat_id(
     user = db.get_user_by_telegram_id(42)
     assert user is not None and user.is_verified
     assert "42" in message.reply_text.await_args.args[0]
+    context.bot.send_message.assert_awaited_once()
+    assert context.bot.send_message.await_args.kwargs["chat_id"] == 42
+    assert context.bot.send_message.await_args.kwargs["reply_markup"] is MAIN_KEYBOARD
+
+
+@pytest.mark.asyncio
+async def test_users_command_lists_every_user_in_telegram_sized_messages(
+    db: Database,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for chat_id in range(250):
+        db.get_or_create_user(chat_id + 1, None, f"User {chat_id}")
+    monkeypatch.setattr("bot.handlers.user_management.get_database", lambda: db)
+    message = SimpleNamespace(reply_text=AsyncMock())
+    update = SimpleNamespace(
+        effective_chat=SimpleNamespace(id=100),
+        effective_message=message,
+    )
+    context = SimpleNamespace(
+        application=SimpleNamespace(
+            bot_data={"settings": Settings(ADMIN_CHAT_IDS="100")}
+        ),
+    )
+
+    await users_command(update, context)
+
+    sent_messages = [call.args[0] for call in message.reply_text.await_args_list]
+    combined = "\n".join(sent_messages)
+    assert len(sent_messages) > 1
+    assert all(len(text) <= 4000 for text in sent_messages)
+    assert "همهٔ کاربران ثبت‌شده (تعداد: 250)" in combined
+    assert "1 | User 0 | در انتظار تأیید" in combined
+    assert "250 | User 249 | در انتظار تأیید" in combined
 
 
 def test_existing_self_verified_users_require_admin_approval(tmp_path: Path) -> None:

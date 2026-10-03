@@ -5,6 +5,7 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
+from bot.handlers.dashboard import MAIN_KEYBOARD
 from bot.handlers.onboarding import VERIFY_REQUIRED_MESSAGE
 from bot.models.database import get_database
 from bot.utils.logging import get_logger
@@ -101,6 +102,15 @@ async def _set_verification(
         if user.display_name and user.department
         else "\nکاربر باید ابتدا در گفت‌وگوی خصوصی ربات دستور /start را اجرا و پروفایلش را تکمیل کند."
     )
+    if verified and user.display_name and user.department:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=(
+                "✅ دسترسی شما توسط مدیر تأیید شد.\n\n"
+                "برای ثبت گزارش، گزینهٔ «ثبت گزارش هفتگی» را از منوی زیر انتخاب کنید."
+            ),
+            reply_markup=MAIN_KEYBOARD,
+        )
     await message.reply_text(f"کاربر {chat_id} {state}.{profile_note}")
     logger.info("Admin changed user verification chat_id=%s verified=%s", chat_id, verified)
 
@@ -116,13 +126,24 @@ async def users_command(
         await message.reply_text("این دستور فقط برای مدیران مجاز است.")
         return
 
-    users = get_database().list_users(limit=20)
+    users = get_database().list_users()
     if not users:
         await message.reply_text("هنوز کاربری در ربات ثبت نشده است.")
         return
-    lines = ["کاربران اخیر (حداکثر ۲۰ مورد):"]
+    lines = [f"همهٔ کاربران ثبت‌شده (تعداد: {len(users)}):"]
     for user in users:
         label = (user.display_name or user.username or "بدون نام")[:60]
         status = "تأییدشده" if user.is_verified else "در انتظار تأیید"
         lines.append(f"{user.telegram_id} | {label} | {status}")
-    await message.reply_text("\n".join(lines))
+
+    chunks: list[str] = []
+    chunk = ""
+    for line in lines:
+        if chunk and len(chunk) + len(line) + 1 > 4000:
+            chunks.append(chunk)
+            chunk = ""
+        chunk = f"{chunk}\n{line}" if chunk else line
+    if chunk:
+        chunks.append(chunk)
+    for chunk in chunks:
+        await message.reply_text(chunk)

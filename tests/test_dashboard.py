@@ -90,6 +90,26 @@ async def test_dashboard_routes_typed_report_input_when_waiting(
 
 
 @pytest.mark.asyncio
+async def test_unrecognized_text_returns_user_to_dashboard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    show_dashboard = AsyncMock()
+    correction = AsyncMock()
+    monkeypatch.setattr("bot.handlers.dashboard.show_dashboard", show_dashboard)
+    monkeypatch.setattr("bot.handlers.dashboard.correction_handler", correction)
+    update = SimpleNamespace(
+        effective_user=SimpleNamespace(id=42),
+        message=SimpleNamespace(text="hello", reply_text=AsyncMock()),
+    )
+    context = SimpleNamespace(user_data={})
+
+    await dashboard_text_handler(update, context)
+
+    show_dashboard.assert_awaited_once_with(update, context)
+    correction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_start_report_keeps_custom_range_option_when_current_week_exists(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -344,7 +344,7 @@ async def dashboard_text_handler(
     if text == BACK:
         await show_dashboard(update, context)
         return
-    await correction_handler(update, context)
+    await show_dashboard(update, context)
 
 
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
