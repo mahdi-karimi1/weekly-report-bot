@@ -142,7 +142,12 @@ def test_onboarding_persists_profile_without_phone_number(db: Database) -> None:
     assert profile.phone_number is None
     assert profile.display_name == "نام کامل"
     assert profile.department == "فناوری"
+    assert not db.is_user_verified(12)
+
+    db.set_user_verification(12, True)
     assert db.is_user_verified(12)
+    db.set_user_verification(12, False)
+    assert not db.is_user_verified(12)
 
 
 def test_suggestion_acceptance_and_rejection_are_persistable() -> None:

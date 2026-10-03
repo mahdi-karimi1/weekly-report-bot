@@ -9,8 +9,10 @@ from telegram import Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
     MessageHandler,
+    TypeHandler,
     filters,
 )
 
@@ -19,6 +21,12 @@ from bot.handlers.confirmation import confirmation_callback, suggestion_callback
 from bot.handlers.dashboard import dashboard_callback, dashboard_text_handler
 from bot.handlers.onboarding import onboarding_conversation
 from bot.handlers.voice import report_conversation
+from bot.handlers.user_management import (
+    access_control,
+    unverify_command,
+    users_command,
+    verify_command,
+)
 from bot.models.database import init_database
 from bot.services.avalai_client import AvalAIClient
 from bot.services.excel_generator import ExcelGenerator
@@ -85,6 +93,7 @@ def create_application(settings: Settings | None = None) -> Application:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
     token = settings.require_telegram_token()
+    settings.require_admin_ids()
 
     init_database(settings.database_url)
     services = build_services(settings)
@@ -98,6 +107,10 @@ def create_application(settings: Settings | None = None) -> Application:
     application.bot_data["settings"] = settings
     application.bot_data["services"] = services
 
+    application.add_handler(TypeHandler(Update, access_control), group=-1)
+    application.add_handler(CommandHandler("verify", verify_command))
+    application.add_handler(CommandHandler("unverify", unverify_command))
+    application.add_handler(CommandHandler("users", users_command))
     application.add_handler(onboarding_conversation())
     application.add_handler(report_conversation())
     application.add_handler(

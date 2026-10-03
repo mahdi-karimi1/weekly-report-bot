@@ -53,7 +53,11 @@ class User(Base):
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_verified: Mapped[bool] = mapped_column(
+        "admin_verified",
+        Boolean,
+        default=False,
+    )
     registered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utcnow,
@@ -113,7 +117,7 @@ class Database:
         self._migrate_user_profile_columns()
 
     def _migrate_user_profile_columns(self) -> None:
-        """Add onboarding columns to existing SQLite databases created before them."""
+        """Add profile and explicit admin-approval columns to existing databases."""
         inspector = inspect(self.engine)
         if "users" not in inspector.get_table_names():
             return
@@ -123,9 +127,9 @@ class Database:
             statements.append("ALTER TABLE users ADD COLUMN phone_number VARCHAR(32)")
         if "department" not in existing:
             statements.append("ALTER TABLE users ADD COLUMN department VARCHAR(255)")
-        if "is_verified" not in existing:
+        if "admin_verified" not in existing:
             statements.append(
-                "ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0"
+                "ALTER TABLE users ADD COLUMN admin_verified BOOLEAN DEFAULT 0"
             )
         if not statements:
             return
@@ -187,6 +191,29 @@ class Database:
             and user.department
         )
 
+    def set_user_verification(self, telegram_id: int, verified: bool) -> User:
+        with self.session() as session:
+            user = session.scalar(select(User).where(User.telegram_id == telegram_id))
+            if user is None:
+                user = User(telegram_id=telegram_id)
+                session.add(user)
+            user.is_verified = verified
+            session.flush()
+            session.refresh(user)
+            session.expunge(user)
+            return user
+
+    def list_users(self, limit: int = 20) -> list[User]:
+        with self.session() as session:
+            users = list(
+                session.scalars(
+                    select(User).order_by(User.id.desc()).limit(limit)
+                )
+            )
+            for user in users:
+                session.expunge(user)
+            return users
+
     def complete_onboarding(
         self,
         telegram_id: int,
@@ -204,7 +231,6 @@ class Database:
             user.username = username if username is not None else user.username
             user.display_name = full_name.strip()
             user.department = department.strip()
-            user.is_verified = True
             session.flush()
             session.refresh(user)
             session.expunge(user)

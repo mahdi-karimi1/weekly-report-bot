@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     )
 
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
+    admin_chat_ids: str = Field(default="", alias="ADMIN_CHAT_IDS")
 
     avalai_api_key: str = Field(default="", alias="AVALAI_API_KEY")
     # Native GenAI / v1beta base URL — must NOT include /v1
@@ -84,6 +85,42 @@ class Settings(BaseSettings):
         alias="LOG_LEVEL",
     )
     log_transcriptions: bool = Field(default=False, alias="LOG_TRANSCRIPTIONS")
+
+    @field_validator("admin_chat_ids")
+    @classmethod
+    def _validate_admin_chat_ids(cls, value: str) -> str:
+        chat_ids: list[str] = []
+        for raw_chat_id in value.split(","):
+            raw_chat_id = raw_chat_id.strip()
+            if not raw_chat_id:
+                continue
+            try:
+                chat_id = int(raw_chat_id)
+            except ValueError as exc:
+                raise ValueError(
+                    "ADMIN_CHAT_IDS must contain comma-separated integers."
+                ) from exc
+            if chat_id == 0:
+                raise ValueError("ADMIN_CHAT_IDS cannot contain 0.")
+            chat_ids.append(str(chat_id))
+        return ",".join(chat_ids)
+
+    @property
+    def admin_ids(self) -> frozenset[int]:
+        return frozenset(
+            int(chat_id)
+            for chat_id in self.admin_chat_ids.split(",")
+            if chat_id
+        )
+
+    def require_admin_ids(self) -> frozenset[int]:
+        admin_ids = self.admin_ids
+        if not admin_ids:
+            raise ValueError(
+                "ADMIN_CHAT_IDS is missing. Set at least one administrator chat ID "
+                "to manage user verification."
+            )
+        return admin_ids
 
     @field_validator("avalai_base_url")
     @classmethod

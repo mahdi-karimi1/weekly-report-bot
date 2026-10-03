@@ -111,6 +111,14 @@ Set at least:
 
 - `TELEGRAM_BOT_TOKEN` — from [@BotFather](https://t.me/BotFather)  
 - `AVALAI_API_KEY` — from AvalAI  
+- `ADMIN_CHAT_IDS` — required, comma-separated Telegram chat IDs permitted to manage access (for example, `123456789`)
+
+New users run `/start` and submit their name and department. Until an administrator
+approves them, report requests and other bot actions are blocked. They can share
+the chat ID shown by the bot with an administrator. Administrators manage access
+with `/verify <chat_id>` and `/unverify <chat_id>`; `/users` lists the latest 20
+registered users. These commands are only available in chats listed in
+`ADMIN_CHAT_IDS`. Existing users must also be approved by an administrator.
 
 ### 5. Start the bot (long polling)
 
@@ -120,8 +128,8 @@ python run.py
 
 ### 6. Test with a text or voice report
 
-1. Open the bot in Telegram → `/start` and enter your full name and department (no phone number is requested)  
-2. Use the dashboard's **📝 ثبت گزارش هفتگی** button; the current Shamsi work week is selected by default. Type your report in Persian or send a Persian voice message; you can also choose another start/end date first. Later, select that week from **📋 گزارش‌های من** or choose its date range again to append more typed text or voice messages to the same report  
+1. Open the bot in Telegram → `/start` and enter your full name and department; ask an administrator to verify the chat ID shown by the bot (no phone number is requested)
+2. After approval, use the dashboard's **📝 ثبت گزارش هفتگی** button; the current Shamsi work week is selected by default. Type your report in Persian or send a Persian voice message; you can also choose another start/end date first. Later, select that week from **📋 گزارش‌های من** or choose its date range again to append more typed text or voice messages to the same report
 3. Review the formatted draft, add more text or voice notes over time, and when ready confirm/edit/cancel it  
 4. On confirm, use **📥 دریافت Excel** on the success screen; use **📋 گزارش‌های من** to reopen previous reports and files  
 
@@ -221,6 +229,7 @@ Webhooks / reverse proxies are optional later; long polling is enough for a VPS 
 ## Security notes
 
 - Credentials only via environment / `.env` (gitignored).  
+- Report and dashboard actions are blocked until a user is approved; only configured `ADMIN_CHAT_IDS` can run `/verify`, `/unverify`, and `/users`.
 - Users only access their own reports (Telegram user id checks on callbacks).  
 - Callback data is validated for ownership and status.  
 - Output filenames are deterministic and filesystem-safe; users never supply paths.  

@@ -38,6 +38,17 @@ def test_require_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
         settings.require_avalai_key()
 
 
+def test_admin_chat_ids_are_parsed_and_validated() -> None:
+    settings = Settings(ADMIN_CHAT_IDS="123456, -100123 ")
+    assert settings.admin_ids == frozenset({123456, -100123})
+    assert settings.require_admin_ids() == frozenset({123456, -100123})
+
+    with pytest.raises(ValueError):
+        Settings(ADMIN_CHAT_IDS="not-a-chat-id")
+    with pytest.raises(ValueError, match="ADMIN_CHAT_IDS is missing"):
+        Settings().require_admin_ids()
+
+
 def test_schema_normalization_sets_additional_properties() -> None:
     schema = {
         "type": "object",

@@ -6,7 +6,12 @@ import asyncio
 from unittest.mock import MagicMock
 
 import pytest
-from telegram.ext import CallbackQueryHandler, ConversationHandler
+from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
+    ConversationHandler,
+    TypeHandler,
+)
 
 from bot.config import Settings
 from bot.main import create_application, ensure_event_loop, run_polling
@@ -106,12 +111,28 @@ def test_application_registers_onboarding_and_suggestion_handlers(
     monkeypatch.setattr("bot.main.setup_logging", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("bot.main.init_database", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("bot.main.build_services", lambda _settings: {})
-    settings = Settings(TELEGRAM_BOT_TOKEN="test-token", AVALAI_API_KEY="test-key")
+    settings = Settings(
+        TELEGRAM_BOT_TOKEN="test-token",
+        AVALAI_API_KEY="test-key",
+        ADMIN_CHAT_IDS="123",
+    )
 
     application = create_application(settings)
     handlers = application.handlers[0]
+    assert any(isinstance(handler, TypeHandler) for handler in application.handlers[-1])
 
     assert any(isinstance(handler, ConversationHandler) for handler in handlers)
+    commands = {
+        command
+        for handler in handlers
+        if isinstance(handler, CommandHandler)
+        for command in handler.commands
+    }
+    assert {"verify", "unverify", "users"}.issubset(commands)
+    assert any(
+        isinstance(handler, CallbackQueryHandler)
+        for handler in handlers
+    )
     patterns = [
         handler.pattern.pattern
         for handler in handlers

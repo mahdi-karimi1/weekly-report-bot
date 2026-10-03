@@ -20,8 +20,8 @@ logger = get_logger(__name__)
 STATE_NAME, STATE_DEPARTMENT = range(2)
 
 VERIFY_REQUIRED_MESSAGE = (
-    "برای ثبت گزارش هفتگی ابتدا هویت سازمانی را تکمیل کنید. "
-    "دستور /start را بزنید و نام و دپارتمان را وارد کنید."
+    "دسترسی شما هنوز توسط مدیر تأیید نشده است. "
+    "شناسهٔ چت شما برای ارسال به مدیر: {chat_id}"
 )
 
 
@@ -52,16 +52,25 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     db.get_or_create_user(user.id, user.username, telegram_name or None)
 
     if db.is_user_verified(user.id):
+        context.user_data.pop("onboarding_in_progress", None)
         await show_dashboard(update, context)
         logger.info("Verified user started bot telegram_id=%s", user.id)
         return ConversationHandler.END
 
+    profile = db.get_user_by_telegram_id(user.id)
+    if profile and profile.display_name and profile.department:
+        context.user_data.pop("onboarding_in_progress", None)
+        await update.message.reply_text(
+            VERIFY_REQUIRED_MESSAGE.format(chat_id=user.id),
+        )
+        return ConversationHandler.END
+
+    context.user_data["onboarding_in_progress"] = True
     await update.message.reply_text(
         "👋 خوش آمدید!\n\n"
-        "برای شروع فقط دو مورد را وارد کنید:\n"
+        "برای درخواست دسترسی، اطلاعات زیر را وارد کنید:\n"
         "1️⃣ نام و نام خانوادگی\n"
         "2️⃣ دپارتمان / واحد\n\n"
-        "⏱ کمتر از ۳۰ ثانیه\n\n"
         "لطفاً نام و نام خانوادگی کامل خود را بفرستید:",
         reply_markup=ReplyKeyboardRemove(),
     )
@@ -109,11 +118,19 @@ async def department_received(update: Update, context: ContextTypes.DEFAULT_TYPE
         username=user.username,
     )
     context.user_data.pop("onboarding_name", None)
+    context.user_data.pop("onboarding_in_progress", None)
 
-    await update.message.reply_text(
-        "پروفایل سازمانی ثبت شد.",
-        reply_markup=MAIN_KEYBOARD,
-    )
-    await show_dashboard(update, context)
+    if db.is_user_verified(user.id):
+        await update.message.reply_text(
+            "پروفایل سازمانی ثبت شد.",
+            reply_markup=MAIN_KEYBOARD,
+        )
+        await show_dashboard(update, context)
+    else:
+        await update.message.reply_text(
+            "اطلاعات شما ثبت شد و در انتظار تأیید مدیر است.\n"
+            f"شناسهٔ چت شما: {user.id}\n"
+            "پس از تأیید مدیر می‌توانید گزارش ارسال کنید."
+        )
     logger.info("Onboarding completed telegram_id=%s", user.id)
     return ConversationHandler.END
